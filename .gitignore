@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Database / Uploads / Local Data
+server/uploads/*
+!server/uploads/.gitkeep
+ai_service/data/vector_store/*
+ai_service/data/documents/*
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
