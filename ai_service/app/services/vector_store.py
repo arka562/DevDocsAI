@@ -3,8 +3,8 @@ import numpy as np
 import os
 import json
 
-# Dimension for all-MiniLM-L6-v2 is 384
-DIMENSION = 384
+# Dimension for Gemini text-embedding-004 is 768
+DIMENSION = 768
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "vector_store")
 os.makedirs(DATA_DIR, exist_ok=True)
 

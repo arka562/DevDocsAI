@@ -1,18 +1,37 @@
-from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
 
-# Load a lightweight pre-trained model for embeddings
-model = SentenceTransformer('all-MiniLM-L6-v2')
+load_dotenv()
+API_KEY = os.getenv("LLM_API_KEY")
+
+if API_KEY:
+    genai.configure(api_key=API_KEY)
 
 def get_embedding(text: str) -> list[float]:
     """
-    Generates a dense vector embedding for a single string of text.
+    Generates a dense vector embedding using Gemini to save RAM.
     """
-    embedding = model.encode(text)
-    return embedding.tolist()
+    if not API_KEY:
+        raise ValueError("LLM_API_KEY is missing")
+    
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=text,
+        task_type="retrieval_query"
+    )
+    return result['embedding']
 
 def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
     """
     Generates embeddings for a batch of texts.
     """
-    embeddings = model.encode(texts)
-    return embeddings.tolist()
+    if not API_KEY:
+        raise ValueError("LLM_API_KEY is missing")
+        
+    result = genai.embed_content(
+        model="models/text-embedding-004",
+        content=texts,
+        task_type="retrieval_document"
+    )
+    return result['embedding']
