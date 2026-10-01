@@ -11,7 +11,7 @@
 ![FAISS](https://img.shields.io/badge/Vector_Search-FAISS-0467DF?style=flat-square)
 ![Gemini](https://img.shields.io/badge/LLM-Google_Gemini-4285F4?style=flat-square&logo=google&logoColor=white)
 
-[Live Demo](#) · [Demo Video](#) · [Report a Bug](https://github.com/arka562/DevDocsAI/issues)
+[Live Demo](https://dev-docs-ai-five.vercel.app/login) · [Demo Video](#) · [Report a Bug](https://github.com/arka562/DevDocsAI/issues)
 
 <br />
 
