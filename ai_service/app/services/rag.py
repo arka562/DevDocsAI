@@ -2,7 +2,7 @@ from app.services.embeddings import get_embedding
 from app.services.vector_store import vector_store
 from app.services.llm import generate_answer
 
-def run_rag_pipeline(question: str, history: list[dict] = None) -> dict:
+def run_rag_pipeline(user_id: str, question: str, history: list[dict] = None) -> dict:
     """
     Executes the RAG pipeline:
     1. Embeds question
@@ -17,7 +17,7 @@ def run_rag_pipeline(question: str, history: list[dict] = None) -> dict:
     question_embedding = get_embedding(question)
     
     # 2. Retrieve relevant chunks (Top 5)
-    results = vector_store.search(question_embedding, top_k=5)
+    results = vector_store.search(user_id, question_embedding, top_k=5)
     
     if not results:
         return {

@@ -59,7 +59,7 @@ const uploadDocument = async (req, res, next) => {
       const aiFormData = new FormData();
       aiFormData.append('file', blob, req.file.filename);
 
-      const aiRes = await fetch(`${aiServiceUrl}/ai/process-document`, {
+      const aiRes = await fetch(`${aiServiceUrl}/ai/process-document?user_id=${req.user.id}`, {
         method: 'POST',
         body: aiFormData
       });
@@ -130,6 +130,18 @@ const deleteDocument = async (req, res, next) => {
     const filePath = path.join(__dirname, '..', 'uploads', document.fileName);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+    }
+    
+    // Delete from FAISS
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    try {
+      await fetch(`${aiServiceUrl}/ai/delete-document`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: req.user.id, source: document.fileName })
+      });
+    } catch(err) {
+      console.error("Failed to delete from FAISS:", err);
     }
 
     await document.deleteOne();

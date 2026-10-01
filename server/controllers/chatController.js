@@ -94,6 +94,7 @@ const sendMessage = async (req, res, next) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
+        user_id: req.user.id,
         question: content,
         history: history
       }),

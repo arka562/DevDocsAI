@@ -11,13 +11,20 @@ from app.services.vector_store import vector_store
 router = APIRouter()
 
 class SearchQuery(BaseModel):
+    user_id: str
     query: str
     top_k: int = 5
 
+class DeleteQuery(BaseModel):
+    user_id: str
+    source: str
+
 @router.post("/process-document")
-async def process_document(file: UploadFile = File(...)):
+async def process_document(file: UploadFile = File(...), user_id: str = ""):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
 
     fd, temp_path = tempfile.mkstemp(suffix=".pdf")
     try:
@@ -28,11 +35,9 @@ async def process_document(file: UploadFile = File(...)):
         cleaned_text = clean_text(raw_text)
         chunks = chunk_text(cleaned_text, chunk_size=500, overlap=50)
 
-        # Generate embeddings
         embeddings = get_embeddings_batch(chunks)
         
-        # Store in FAISS
-        vector_store.add_chunks(chunks, embeddings, source=file.filename)
+        vector_store.add_chunks(user_id, chunks, embeddings, source=file.filename)
 
         return {
             "filename": file.filename,
@@ -50,8 +55,16 @@ async def process_document(file: UploadFile = File(...)):
 async def retrieve_chunks(query: SearchQuery):
     try:
         query_embedding = get_embedding(query.query)
-        results = vector_store.search(query_embedding, top_k=query.top_k)
+        results = vector_store.search(query.user_id, query_embedding, top_k=query.top_k)
         return {"query": query.query, "results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/delete-document")
+async def delete_document(query: DeleteQuery):
+    try:
+        vector_store.delete_document(query.user_id, query.source)
+        return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
