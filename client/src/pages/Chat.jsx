@@ -36,7 +36,7 @@ const Chat = () => {
 
   const fetchConversations = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/chat/conversations', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/conversations`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setConversations(res.data);
@@ -50,7 +50,7 @@ const Chat = () => {
 
   const createNewConversation = async () => {
     try {
-      const res = await axios.post('http://localhost:5000/api/chat/conversations', {}, {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/conversations`, {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setConversations([res.data, ...conversations]);
@@ -63,7 +63,7 @@ const Chat = () => {
 
   const fetchMessages = async (id) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/chat/conversations/${id}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/conversations/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setMessages(res.data);
@@ -83,7 +83,7 @@ const Chat = () => {
 
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/chat/conversations/${activeConvId}/messages`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/chat/conversations/${activeConvId}/messages`,
         { content: userMsg.content },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

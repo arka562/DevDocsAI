@@ -21,7 +21,7 @@ const Documents = () => {
   const fetchDocuments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/documents', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/documents`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setDocuments(res.data);
@@ -63,7 +63,7 @@ const Documents = () => {
     try {
       setUploading(true);
       setError('');
-      await axios.post('http://localhost:5000/api/documents/upload', formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/documents/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${user.token}`
@@ -84,7 +84,7 @@ const Documents = () => {
     if (!window.confirm('Are you sure you want to delete this document?')) return;
     
     try {
-      await axios.delete(`http://localhost:5000/api/documents/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/documents/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       setDocuments(documents.filter(doc => doc._id !== id));
