@@ -138,7 +138,7 @@ Set at least these values in `ai_service/.env`:
 - `LLM_API_KEY`: your Gemini API key
 - `INTERNAL_API_KEY`: a long, random secret shared with the Express server
 - `FRONTEND_URL`: the exact browser origin(s), comma-separated if more than one
-- `MAX_UPLOAD_BYTES`: maximum accepted PDF size in bytes (default: 20 MiB)
+- `MAX_UPLOAD_BYTES`: maximum accepted PDF size in bytes (default: 10 MiB)
 
 Start the service from the `ai_service` directory:
 
@@ -191,7 +191,7 @@ Open the Vite URL printed in the terminal (normally `http://localhost:5173`), re
 | `LLM_API_KEY` | AI service | Gemini API key for generation/embeddings |
 | `INTERNAL_API_KEY` | Both | Shared secret for Express-to-FastAPI requests; required |
 | `FRONTEND_URL` | AI service | Allowed frontend origin(s), comma-separated |
-| `MAX_UPLOAD_BYTES` | AI service | PDF size limit in bytes; defaults to 20 MiB |
+| `MAX_UPLOAD_BYTES` | AI service | PDF size limit in bytes; defaults to 10 MiB |
 | `EMBEDDING_MODEL` | AI service | Embedding model setting used by the project |
 | `VECTOR_DB_PATH` | AI service | Legacy/configurable vector storage path; verify against deployment setup |
 | `PORT` | Express server | API port; defaults to 5000 |
@@ -257,7 +257,7 @@ DevDocsAI/
 - FastAPI rejects requests to `/ai/*` when `INTERNAL_API_KEY` is missing or invalid.
 - The internal key has no built-in fallback. Configure it in both services.
 - User and document identifiers are validated as MongoDB ObjectId-shaped values before vector-store access.
-- The AI service enforces its own PDF upload size limit (default 20 MiB); configure the upstream Express upload middleware to use a compatible limit too.
+- The AI service enforces its own PDF upload size limit (default 10 MiB); configure the upstream Express upload middleware to use a compatible limit too.
 - FAISS data is persisted as local files. A single-process lock protects operations within one Python process, but it is not a distributed lock; multi-worker or multi-instance deployments need shared storage and cross-process coordination.
 - Deletion spans FAISS, the uploaded file, and MongoDB. A process crash between these steps can leave inconsistent state; production deployments should add a retryable deletion job or reconciliation task.
 - The repository's configured deployment, environment values, and external services must be verified separately before treating a deployment as production-ready.
