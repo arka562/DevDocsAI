@@ -1,6 +1,12 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 
+const getInternalApiKey = () => {
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) throw new Error('INTERNAL_API_KEY is not configured');
+  return key;
+};
+
 // @desc    Get all conversations for a user
 // @route   GET /api/chat/conversations
 // @access  Private
@@ -52,73 +58,66 @@ const getMessages = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
   try {
     const { content } = req.body;
-    if (!content) {
+    if (!content || typeof content !== 'string' || !content.trim()) {
       res.status(400);
       throw new Error('Message content is required');
     }
 
     const conversationId = req.params.id;
     const conversation = await Conversation.findById(conversationId);
-    
     if (!conversation || conversation.userId.toString() !== req.user.id) {
       res.status(404);
       throw new Error('Conversation not found');
     }
 
-    // 1. Save user message
     const userMessage = await Message.create({
       conversationId,
       role: 'user',
-      content
+      content: content.trim(),
     });
 
-    // 2. Fetch last 4 messages for context (excluding the one we just saved)
-    const previousMessages = await Message.find({ 
-      conversationId, 
-      _id: { $ne: userMessage._id } 
+    const previousMessages = await Message.find({
+      conversationId,
+      _id: { $ne: userMessage._id },
     })
       .sort({ createdAt: -1 })
       .limit(4);
-      
-    // Reverse so they are in chronological order
-    const history = previousMessages.reverse().map(msg => ({
+
+    const history = previousMessages.reverse().map((msg) => ({
       role: msg.role,
-      content: msg.content
+      content: msg.content,
     }));
 
-    // 3. Call FastAPI AI Service
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     const response = await fetch(`${aiServiceUrl}/ai/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
+        'X-API-Key': getInternalApiKey(),
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         user_id: req.user.id,
-        question: content,
-        history: history
+        question: content.trim(),
+        history,
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to fetch from AI service');
+      const errorText = await response.text();
+      console.error('AI Service Error:', response.status, errorText);
+      throw new Error('Failed to fetch an answer from the AI service');
     }
 
     const aiData = await response.json();
-
-    // 3. Save AI message
     const aiMessage = await Message.create({
       conversationId,
       role: 'assistant',
       content: aiData.answer,
-      sources: aiData.sources || []
+      sources: aiData.sources || [],
     });
 
-    // Update conversation timestamp and title if it's the first message
     if (conversation.title === 'New Conversation') {
-      conversation.title = content.substring(0, 30) + (content.length > 30 ? '...' : '');
+      conversation.title = content.trim().substring(0, 30) + (content.trim().length > 30 ? '...' : '');
     }
     await conversation.save();
 
@@ -138,9 +137,7 @@ const deleteConversation = async (req, res, next) => {
       res.status(404);
       throw new Error('Conversation not found');
     }
-    // Delete all messages in the conversation
     await Message.deleteMany({ conversationId: req.params.id });
-    // Delete the conversation itself
     await conversation.deleteOne();
     res.status(200).json({ id: req.params.id });
   } catch (error) {
