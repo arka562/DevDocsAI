@@ -25,17 +25,17 @@ def run_rag_pipeline(user_id: str, question: str, history: list[dict] = None) ->
             "sources": []
         }
         
-    # Extract just the text for the LLM context
-    context_chunks = [res["text"] for res in results]
+    # Extract text for the LLM context (include page context)
+    context_chunks = [f"[Source: {res['source']}, Page {res.get('page', '?')}]\n{res['text']}" for res in results]
     
     # Extract unique sources for the citations
     sources = []
     seen = set()
     for res in results:
-        source_name = res["source"]
-        if source_name not in seen:
-            sources.append({"documentName": source_name})
-            seen.add(source_name)
+        source_key = f"{res['source']} (Page {res.get('page', '?')})"
+        if source_key not in seen:
+            sources.append({"documentName": source_key})
+            seen.add(source_key)
             
     # 3 & 4. Generate answer via LLM
     answer = generate_answer(question, context_chunks, history)

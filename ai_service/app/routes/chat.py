@@ -29,4 +29,5 @@ async def chat_with_docs(request: ChatRequest):
         response = run_rag_pipeline(request.user_id, request.question, history_dicts)
         return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Internal error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")

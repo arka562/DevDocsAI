@@ -1,21 +1,26 @@
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
+def chunk_text(pages: list[dict], chunk_size: int = 500, overlap: int = 50) -> list[dict]:
     """
-    Splits text into chunks of roughly `chunk_size` tokens (approximated by words).
+    Splits page texts into chunks of roughly `chunk_size` words.
     Includes `overlap` words from the previous chunk.
+    Returns list of dicts: {"text": str, "page": int}
     """
-    if not text:
+    if not pages:
         return []
 
-    words = text.split()
     chunks = []
     
-    if len(words) <= chunk_size:
-        return [text]
-
-    i = 0
-    while i < len(words):
-        chunk = words[i:i + chunk_size]
-        chunks.append(" ".join(chunk))
-        i += chunk_size - overlap
+    for page in pages:
+        words = page["text"].split()
+        if not words:
+            continue
+            
+        i = 0
+        while i < len(words):
+            chunk_words = words[i:i + chunk_size]
+            chunks.append({
+                "text": " ".join(chunk_words),
+                "page": page["page"]
+            })
+            i += chunk_size - overlap
 
     return chunks

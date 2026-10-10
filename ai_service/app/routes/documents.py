@@ -31,22 +31,24 @@ async def process_document(file: UploadFile = File(...), user_id: str = ""):
         with os.fdopen(fd, 'wb') as f:
             f.write(await file.read())
 
-        raw_text = extract_text_from_pdf(temp_path)
-        cleaned_text = clean_text(raw_text)
-        chunks = chunk_text(cleaned_text, chunk_size=500, overlap=50)
+        raw_pages = extract_text_from_pdf(temp_path)
+        cleaned_pages = [{"page": p["page"], "text": clean_text(p["text"])} for p in raw_pages]
+        chunks_with_meta = chunk_text(cleaned_pages, chunk_size=500, overlap=50)
 
-        embeddings = get_embeddings_batch(chunks)
+        chunks_text = [c["text"] for c in chunks_with_meta]
+        embeddings = get_embeddings_batch(chunks_text)
         
-        vector_store.add_chunks(user_id, chunks, embeddings, source=file.filename)
+        vector_store.add_chunks(user_id, chunks_with_meta, embeddings, source=file.filename)
 
         return {
             "filename": file.filename,
             "status": "success",
-            "extracted_characters": len(raw_text),
-            "chunk_count": len(chunks)
+            "extracted_pages": len(raw_pages),
+            "chunk_count": len(chunks_with_meta)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Internal error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -58,7 +60,8 @@ async def retrieve_chunks(query: SearchQuery):
         results = vector_store.search(query.user_id, query_embedding, top_k=query.top_k)
         return {"query": query.query, "results": results}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Internal error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/delete-document")
 async def delete_document(query: DeleteQuery):
@@ -66,5 +69,6 @@ async def delete_document(query: DeleteQuery):
         vector_store.delete_document(query.user_id, query.source)
         return {"status": "success"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Internal error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 

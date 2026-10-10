@@ -92,6 +92,7 @@ const sendMessage = async (req, res, next) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
       },
       body: JSON.stringify({ 
         user_id: req.user.id,

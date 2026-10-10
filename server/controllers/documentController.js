@@ -61,6 +61,9 @@ const uploadDocument = async (req, res, next) => {
 
       const aiRes = await fetch(`${aiServiceUrl}/ai/process-document?user_id=${req.user.id}`, {
         method: 'POST',
+        headers: {
+          'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
+        },
         body: aiFormData
       });
 
@@ -137,7 +140,10 @@ const deleteDocument = async (req, res, next) => {
     try {
       await fetch(`${aiServiceUrl}/ai/delete-document`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
+        },
         body: JSON.stringify({ user_id: req.user.id, source: document.fileName })
       });
     } catch(err) {

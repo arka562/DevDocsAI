@@ -36,7 +36,7 @@ class VectorStore:
         with open(metadata_path, 'w') as f:
             json.dump(self.metadata[user_id], f)
 
-    def add_chunks(self, user_id: str, chunks: list[str], embeddings: list[list[float]], source: str):
+    def add_chunks(self, user_id: str, chunks: list[dict], embeddings: list[list[float]], source: str):
         if not chunks:
             return
             
@@ -46,7 +46,8 @@ class VectorStore:
         
         for chunk in chunks:
             self.metadata[user_id].append({
-                "text": chunk,
+                "text": chunk["text"],
+                "page": chunk["page"],
                 "source": source
             })
             
@@ -64,9 +65,11 @@ class VectorStore:
         results = []
         for i, idx in enumerate(indices[0]):
             if idx != -1 and idx < len(self.metadata[user_id]):
+                meta = self.metadata[user_id][idx]
                 results.append({
-                    "text": self.metadata[user_id][idx]["text"],
-                    "source": self.metadata[user_id][idx]["source"],
+                    "text": meta["text"],
+                    "source": meta["source"],
+                    "page": meta.get("page", "?"),
                     "distance": float(distances[0][i])
                 })
         return results
