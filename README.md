@@ -188,21 +188,18 @@ DevDocsAI/
 
 ## Known Limitations
 
-- One shared vector index for all users, not one per user
-- Deleting a document removes it from the database but not from the vector index
-- Citations show document names only, not page numbers
 - No streaming: the full answer is generated before it is shown
 - Chunking uses word count, not a real tokenizer
 - No reranking or hybrid search
-- API URL is hardcoded to `localhost:5000` in the client
 
 ## Roadmap
 
-- [ ] Per-user vector isolation
-- [ ] Remove deleted documents from the index
-- [ ] Page-level citations
+- [x] Per-user vector isolation
+- [x] Remove deleted documents from the index
+- [x] Page-level citations
+- [x] Deploy with environment-based API URL
 - [ ] Streaming responses
-- [ ] Deploy with environment-based API URL
+- [ ] Implement semantic chunking instead of raw word splits
 
 ---
 

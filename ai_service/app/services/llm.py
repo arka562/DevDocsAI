@@ -54,5 +54,6 @@ Provide:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        print(f"Error generating answer: {e}")
-        return f"Sorry, I encountered an error while generating the response: {str(e)}"
+        import logging
+        logging.exception("LLM generation failed")
+        return "Sorry, I encountered an internal error while communicating with the AI model."

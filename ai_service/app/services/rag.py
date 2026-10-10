@@ -32,9 +32,15 @@ def run_rag_pipeline(user_id: str, question: str, history: list[dict] = None) ->
     sources = []
     seen = set()
     for res in results:
-        source_key = f"{res['source']} (Page {res.get('page', '?')})"
+        doc_id = res.get('document_id', 'unknown')
+        page = res.get('page', '?')
+        source_key = f"{doc_id}_{page}"
         if source_key not in seen:
-            sources.append({"documentName": source_key})
+            sources.append({
+                "documentId": doc_id,
+                "documentName": res['source'],
+                "page": page
+            })
             seen.add(source_key)
             
     # 3 & 4. Generate answer via LLM

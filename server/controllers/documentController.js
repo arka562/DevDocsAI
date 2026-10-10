@@ -59,7 +59,7 @@ const uploadDocument = async (req, res, next) => {
       const aiFormData = new FormData();
       aiFormData.append('file', blob, req.file.filename);
 
-      const aiRes = await fetch(`${aiServiceUrl}/ai/process-document?user_id=${req.user.id}`, {
+      const aiRes = await fetch(`${aiServiceUrl}/ai/process-document?user_id=${req.user.id}&document_id=${document._id}`, {
         method: 'POST',
         headers: {
           'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
@@ -129,25 +129,31 @@ const deleteDocument = async (req, res, next) => {
       throw new Error('User not authorized');
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(__dirname, '..', 'uploads', document.fileName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    
-    // Delete from FAISS
+    // Delete from FAISS FIRST. If this fails, we throw an error and abort deletion.
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     try {
-      await fetch(`${aiServiceUrl}/ai/delete-document`, {
+      const aiRes = await fetch(`${aiServiceUrl}/ai/delete-document`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
         },
-        body: JSON.stringify({ user_id: req.user.id, source: document.fileName })
+        body: JSON.stringify({ user_id: req.user.id, document_id: document._id.toString() })
       });
+      
+      if (!aiRes.ok) {
+        throw new Error('AI Service failed to delete vector chunks');
+      }
     } catch(err) {
       console.error("Failed to delete from FAISS:", err);
+      res.status(500);
+      throw new Error('Could not cleanly delete document vectors from AI service');
+    }
+
+    // Delete file from filesystem
+    const filePath = path.join(__dirname, '..', 'uploads', document.fileName);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
 
     await document.deleteOne();

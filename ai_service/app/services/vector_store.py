@@ -1,8 +1,9 @@
-
 import faiss
 import numpy as np
 import os
 import json
+import threading
+import re
 
 # Dimension for Gemini text-embedding-004 is 768
 DIMENSION = 768
@@ -13,94 +14,114 @@ class VectorStore:
     def __init__(self):
         self.indexes = {}
         self.metadata = {}
+        self.locks = {}
+        self.global_lock = threading.Lock()
+
+    def _sanitize(self, user_id: str) -> str:
+        # Prevent path traversal by only allowing alphanumeric and dashes
+        return re.sub(r'[^a-zA-Z0-9-]', '', user_id)
+
+    def _get_lock(self, user_id: str):
+        with self.global_lock:
+            if user_id not in self.locks:
+                self.locks[user_id] = threading.Lock()
+            return self.locks[user_id]
 
     def _load_user_index(self, user_id: str):
-        if user_id in self.indexes:
+        safe_id = self._sanitize(user_id)
+        if safe_id in self.indexes:
             return
             
-        index_path = os.path.join(DATA_DIR, f"{user_id}_index.faiss")
-        metadata_path = os.path.join(DATA_DIR, f"{user_id}_metadata.json")
+        index_path = os.path.join(DATA_DIR, f"{safe_id}_index.faiss")
+        metadata_path = os.path.join(DATA_DIR, f"{safe_id}_metadata.json")
         
         if os.path.exists(index_path):
-            self.indexes[user_id] = faiss.read_index(index_path)
+            self.indexes[safe_id] = faiss.read_index(index_path)
             with open(metadata_path, 'r') as f:
-                self.metadata[user_id] = json.load(f)
+                self.metadata[safe_id] = json.load(f)
         else:
-            self.indexes[user_id] = faiss.IndexFlatL2(DIMENSION)
-            self.metadata[user_id] = []
+            self.indexes[safe_id] = faiss.IndexFlatL2(DIMENSION)
+            self.metadata[safe_id] = []
 
     def _save_user_index(self, user_id: str):
-        index_path = os.path.join(DATA_DIR, f"{user_id}_index.faiss")
-        metadata_path = os.path.join(DATA_DIR, f"{user_id}_metadata.json")
-        faiss.write_index(self.indexes[user_id], index_path)
+        safe_id = self._sanitize(user_id)
+        index_path = os.path.join(DATA_DIR, f"{safe_id}_index.faiss")
+        metadata_path = os.path.join(DATA_DIR, f"{safe_id}_metadata.json")
+        faiss.write_index(self.indexes[safe_id], index_path)
         with open(metadata_path, 'w') as f:
-            json.dump(self.metadata[user_id], f)
+            json.dump(self.metadata[safe_id], f)
 
-    def add_chunks(self, user_id: str, chunks: list[dict], embeddings: list[list[float]], source: str):
+    def add_chunks(self, user_id: str, chunks: list[dict], embeddings: list[list[float]], source: str, document_id: str):
         if not chunks:
             return
             
-        self._load_user_index(user_id)
-        vectors = np.array(embeddings).astype('float32')
-        self.indexes[user_id].add(vectors)
-        
-        for chunk in chunks:
-            self.metadata[user_id].append({
-                "text": chunk["text"],
-                "page": chunk["page"],
-                "source": source
-            })
+        safe_id = self._sanitize(user_id)
+        with self._get_lock(safe_id):
+            self._load_user_index(safe_id)
+            vectors = np.array(embeddings).astype('float32')
+            self.indexes[safe_id].add(vectors)
             
-        self._save_user_index(user_id)
+            for chunk in chunks:
+                self.metadata[safe_id].append({
+                    "text": chunk["text"],
+                    "page": chunk["page"],
+                    "source": source,
+                    "document_id": document_id
+                })
+                
+            self._save_user_index(safe_id)
 
     def search(self, user_id: str, query_embedding: list[float], top_k: int = 5) -> list[dict]:
-        self._load_user_index(user_id)
-        
-        if self.indexes[user_id].ntotal == 0:
-            return []
+        safe_id = self._sanitize(user_id)
+        with self._get_lock(safe_id):
+            self._load_user_index(safe_id)
             
-        vector = np.array([query_embedding]).astype('float32')
-        distances, indices = self.indexes[user_id].search(vector, top_k)
-        
-        results = []
-        for i, idx in enumerate(indices[0]):
-            if idx != -1 and idx < len(self.metadata[user_id]):
-                meta = self.metadata[user_id][idx]
-                results.append({
-                    "text": meta["text"],
-                    "source": meta["source"],
-                    "page": meta.get("page", "?"),
-                    "distance": float(distances[0][i])
-                })
-        return results
-        
-    def delete_document(self, user_id: str, source: str):
-        self._load_user_index(user_id)
-        
-        # FAISS doesn't support easy deletion in IndexFlatL2, so we rebuild the index
-        old_metadata = self.metadata[user_id]
-        
-        # Keep only chunks that don't match the source
-        indices_to_keep = [i for i, meta in enumerate(old_metadata) if meta["source"] != source]
-        
-        if len(indices_to_keep) == len(old_metadata):
-            return # Nothing to delete
+            if self.indexes[safe_id].ntotal == 0:
+                return []
+                
+            vector = np.array([query_embedding]).astype('float32')
+            distances, indices = self.indexes[safe_id].search(vector, top_k)
             
-        new_metadata = [old_metadata[i] for i in indices_to_keep]
-        
-        # Rebuild FAISS index
-        new_index = faiss.IndexFlatL2(DIMENSION)
-        if new_metadata:
-            # Re-extract all vectors from the old index and add them to the new index
-            vectors = []
-            for i in indices_to_keep:
-                vec = self.indexes[user_id].reconstruct(i)
-                vectors.append(vec)
-            new_index.add(np.array(vectors).astype('float32'))
+            results = []
+            for i, idx in enumerate(indices[0]):
+                if idx != -1 and idx < len(self.metadata[safe_id]):
+                    meta = self.metadata[safe_id][idx]
+                    results.append({
+                        "text": meta["text"],
+                        "source": meta["source"],
+                        "document_id": meta.get("document_id", ""),
+                        "page": meta.get("page", "?"),
+                        "distance": float(distances[0][i])
+                    })
+            return results
             
-        self.indexes[user_id] = new_index
-        self.metadata[user_id] = new_metadata
-        self._save_user_index(user_id)
+    def delete_document(self, user_id: str, document_id: str):
+        safe_id = self._sanitize(user_id)
+        with self._get_lock(safe_id):
+            self._load_user_index(safe_id)
+            
+            old_metadata = self.metadata[safe_id]
+            
+            # Keep only chunks that don't match the document_id
+            indices_to_keep = [i for i, meta in enumerate(old_metadata) if meta.get("document_id") != document_id]
+            
+            if len(indices_to_keep) == len(old_metadata):
+                return # Nothing to delete
+                
+            new_metadata = [old_metadata[i] for i in indices_to_keep]
+            
+            # Rebuild FAISS index
+            new_index = faiss.IndexFlatL2(DIMENSION)
+            if new_metadata:
+                vectors = []
+                for i in indices_to_keep:
+                    vec = self.indexes[safe_id].reconstruct(i)
+                    vectors.append(vec)
+                new_index.add(np.array(vectors).astype('float32'))
+                
+            self.indexes[safe_id] = new_index
+            self.metadata[safe_id] = new_metadata
+            self._save_user_index(safe_id)
 
 # Singleton instance
 vector_store = VectorStore()

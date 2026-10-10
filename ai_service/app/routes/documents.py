@@ -17,14 +17,14 @@ class SearchQuery(BaseModel):
 
 class DeleteQuery(BaseModel):
     user_id: str
-    source: str
+    document_id: str
 
 @router.post("/process-document")
-async def process_document(file: UploadFile = File(...), user_id: str = ""):
+async def process_document(file: UploadFile = File(...), user_id: str = "", document_id: str = ""):
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
+    if not user_id or not document_id:
+        raise HTTPException(status_code=400, detail="user_id and document_id are required")
 
     fd, temp_path = tempfile.mkstemp(suffix=".pdf")
     try:
@@ -38,7 +38,7 @@ async def process_document(file: UploadFile = File(...), user_id: str = ""):
         chunks_text = [c["text"] for c in chunks_with_meta]
         embeddings = get_embeddings_batch(chunks_text)
         
-        vector_store.add_chunks(user_id, chunks_with_meta, embeddings, source=file.filename)
+        vector_store.add_chunks(user_id, chunks_with_meta, embeddings, source=file.filename, document_id=document_id)
 
         return {
             "filename": file.filename,
@@ -66,7 +66,7 @@ async def retrieve_chunks(query: SearchQuery):
 @router.post("/delete-document")
 async def delete_document(query: DeleteQuery):
     try:
-        vector_store.delete_document(query.user_id, query.source)
+        vector_store.delete_document(query.user_id, query.document_id)
         return {"status": "success"}
     except Exception as e:
         print(f"Internal error: {e}")
