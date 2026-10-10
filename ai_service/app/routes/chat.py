@@ -1,33 +1,30 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.services.rag import run_rag_pipeline
 
 router = APIRouter()
 
+
 class MessageHistory(BaseModel):
-    role: str
-    content: str
+    role: str = Field(..., pattern=r"^(user|assistant)$")
+    content: str = Field(..., max_length=4000)
+
 
 class ChatRequest(BaseModel):
-    user_id: str
-    question: str
-    history: list[MessageHistory] = []
+    user_id: str = Field(..., pattern=r"^[a-fA-F0-9]{24}$")
+    question: str = Field(..., min_length=1, max_length=4000)
+    history: list[MessageHistory] = Field(default_factory=list, max_length=4)
+
 
 @router.post("/chat")
 async def chat_with_docs(request: ChatRequest):
-    """
-    RAG Endpoint: Answers a question based on uploaded documentation.
-    """
-    if not request.question:
-        raise HTTPException(status_code=400, detail="Question is required")
-    if not request.user_id:
-        raise HTTPException(status_code=400, detail="user_id is required")
-        
+    """Answer a question based on the authenticated user's uploaded documentation."""
     try:
-        # Convert Pydantic models to dicts for the service layer
         history_dicts = [{"role": msg.role, "content": msg.content} for msg in request.history]
         response = run_rag_pipeline(request.user_id, request.question, history_dicts)
         return response
-    except Exception as e:
-        print(f"Internal error: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid chat request") from exc
+    except Exception as exc:
+        print(f"Chat request failed: {type(exc).__name__}: {exc}")
+        raise HTTPException(status_code=500, detail="Unable to generate an answer right now") from exc
