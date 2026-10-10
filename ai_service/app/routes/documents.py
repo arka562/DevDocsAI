@@ -11,7 +11,8 @@ from app.services.vector_store import vector_store
 
 router = APIRouter()
 OBJECT_ID_PATTERN = re.compile(r"^[a-fA-F0-9]{24}$")
-MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(20 * 1024 * 1024)))
+# Keep this aligned with the Express/Multer upload limit (10 MiB).
+MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
 UPLOAD_READ_CHUNK_BYTES = 1024 * 1024
 
 
