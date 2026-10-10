@@ -2,6 +2,12 @@ const Document = require('../models/Document');
 const fs = require('fs');
 const path = require('path');
 
+const getInternalApiKey = () => {
+  const key = process.env.INTERNAL_API_KEY;
+  if (!key) throw new Error('INTERNAL_API_KEY is not configured');
+  return key;
+};
+
 // @desc    Get all documents for a user
 // @route   GET /api/documents
 // @access  Private
@@ -25,47 +31,39 @@ const uploadDocument = async (req, res, next) => {
     }
 
     const { title } = req.body;
-    
     if (!title) {
       fs.unlinkSync(req.file.path);
       res.status(400);
       throw new Error('Please provide a title');
     }
 
-    // 1. Create document in DB with 'processing' status
     const document = await Document.create({
       userId: req.user.id,
-      title: title,
+      title,
       fileName: req.file.filename,
       fileType: req.file.mimetype,
       fileSize: req.file.size,
       status: 'processing',
     });
 
-    res.status(201).json(document); // Send immediate response to frontend
+    res.status(201).json(document);
 
-    // 2. Process document asynchronously via FastAPI
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
-    
+
     try {
-      const formData = new FormData();
-      const fileStream = fs.createReadStream(req.file.path);
-      // Constructing form data for node-fetch is tricky natively, so we can use standard fetch with File/Blob
-      // or simply pass the file buffer. Since Node 18 fetch doesn't perfectly support streams in FormData out of the box,
-      // we'll send it as a Blob.
       const fileBuffer = fs.readFileSync(req.file.path);
       const blob = new Blob([fileBuffer], { type: req.file.mimetype });
-      
       const aiFormData = new FormData();
       aiFormData.append('file', blob, req.file.filename);
 
-      const aiRes = await fetch(`${aiServiceUrl}/ai/process-document?user_id=${req.user.id}&document_id=${document._id}`, {
-        method: 'POST',
-        headers: {
-          'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
-        },
-        body: aiFormData
-      });
+      const aiRes = await fetch(
+        `${aiServiceUrl}/ai/process-document?user_id=${encodeURIComponent(req.user.id)}&document_id=${encodeURIComponent(document._id.toString())}`,
+        {
+          method: 'POST',
+          headers: { 'X-API-Key': getInternalApiKey() },
+          body: aiFormData,
+        }
+      );
 
       if (aiRes.ok) {
         const aiData = await aiRes.json();
@@ -99,7 +97,6 @@ const getDocument = async (req, res, next) => {
       throw new Error('Document not found');
     }
 
-    // Check for user ownership
     if (document.userId.toString() !== req.user.id) {
       res.status(401);
       throw new Error('User not authorized');
@@ -123,41 +120,38 @@ const deleteDocument = async (req, res, next) => {
       throw new Error('Document not found');
     }
 
-    // Check for user ownership
     if (document.userId.toString() !== req.user.id) {
       res.status(401);
       throw new Error('User not authorized');
     }
 
-    // Delete from FAISS FIRST. If this fails, we throw an error and abort deletion.
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     try {
       const aiRes = await fetch(`${aiServiceUrl}/ai/delete-document`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': process.env.INTERNAL_API_KEY || 'devdocs-secret-key'
+          'X-API-Key': getInternalApiKey(),
         },
-        body: JSON.stringify({ user_id: req.user.id, document_id: document._id.toString() })
+        body: JSON.stringify({
+          user_id: req.user.id,
+          document_id: document._id.toString(),
+        }),
       });
-      
+
       if (!aiRes.ok) {
-        throw new Error('AI Service failed to delete vector chunks');
+        throw new Error(`AI Service failed to delete vector chunks (HTTP ${aiRes.status})`);
       }
-    } catch(err) {
-      console.error("Failed to delete from FAISS:", err);
+    } catch (err) {
+      console.error('Failed to delete from FAISS:', err);
       res.status(500);
       throw new Error('Could not cleanly delete document vectors from AI service');
     }
 
-    // Delete file from filesystem
     const filePath = path.join(__dirname, '..', 'uploads', document.fileName);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     await document.deleteOne();
-
     res.status(200).json({ id: req.params.id });
   } catch (error) {
     next(error);
