@@ -11,6 +11,13 @@ def test_model_names_come_from_env(monkeypatch):
     for name in list(sys.modules):
         if name.startswith("app.services.embeddings") or name.startswith("app.services.llm"):
             del sys.modules[name]
+    # The parent package keeps an attribute pointing at the old module
+    # objects; drop those too or the from-import returns the stale modules.
+    import app.services as services_pkg
+
+    for attr in ("embeddings", "llm"):
+        if hasattr(services_pkg, attr):
+            delattr(services_pkg, attr)
     from app.services import embeddings, llm
 
     assert embeddings.EMBEDDING_MODEL == "models/test-embed"
