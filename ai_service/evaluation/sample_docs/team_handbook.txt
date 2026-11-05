@@ -1,0 +1,9 @@
+Acme Team Handbook (fictional company, for evaluation only)
+Every employee at Acme receives 24 days of paid leave per year.
+Leave requests must be submitted at least 10 days in advance through the HR portal.
+Probation for new employees lasts 3 months.
+---PAGE---
+Remote Work and Equipment
+Employees may work from home up to 3 days per week after probation ends.
+Acme provides one laptop and a monitor budget of 300 US dollars for home office setup.
+The official work chat tool at Acme is called TeamChat, and official email uses the acme.example domain.

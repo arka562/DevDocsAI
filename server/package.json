@@ -1,10 +1,11 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Express API for DevDocs AI (auth, documents, chat proxy to the AI service)",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js", "dev": "nodemon server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",

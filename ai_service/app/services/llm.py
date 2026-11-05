@@ -8,8 +8,10 @@ API_KEY = os.getenv("LLM_API_KEY")
 if API_KEY:
     genai.configure(api_key=API_KEY)
 
-# Use Gemini 1.5 Flash (or equivalent)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Generation model is configurable via env; default matches the model the
+# project has been running with.
+GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-1.5-flash")
+model = genai.GenerativeModel(GENERATION_MODEL)
 
 def generate_answer(question: str, context: list[str], history: list[dict] = None) -> str:
     """

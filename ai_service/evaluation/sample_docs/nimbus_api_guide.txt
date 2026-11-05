@@ -1,0 +1,17 @@
+Nimbus API Guide
+Nimbus is a fictional cloud file-storage API used only as evaluation sample data for DevDocs AI.
+All requests to the Nimbus API must include the X-Nimbus-Key header with a valid API key.
+Requests without the X-Nimbus-Key header are rejected with error 401.
+The base URL for all Nimbus endpoints is https://api.nimbus.example.com/v2
+---PAGE---
+Rate Limits and Plans
+The Nimbus free plan allows 100 requests per hour per API key.
+The Nimbus Pro plan allows 5000 requests per hour per API key.
+When a key exceeds its rate limit, the API returns error 429 and the client must wait 60 seconds before retrying.
+Uploads on the free plan are limited to 25 MB per file.
+---PAGE---
+Error Codes and Data Retention
+Error 404 means the requested file does not exist in Nimbus storage.
+Error 413 means the uploaded file is larger than the plan limit.
+Nimbus keeps deleted files in a recovery bin for 14 days, after which they are permanently erased.
+All Nimbus data is stored in the eu-west region unless the account owner changes the region setting.

@@ -15,7 +15,6 @@
 
 <br />
 
-<img src="./docs/demo.gif" alt="DevDocs AI demo" width="800" />
 
 </div>
 
@@ -193,6 +192,7 @@ Open the Vite URL printed in the terminal (normally `http://localhost:5173`), re
 | `FRONTEND_URL` | AI service | Allowed frontend origin(s), comma-separated |
 | `MAX_UPLOAD_BYTES` | AI service | PDF size limit in bytes; defaults to 10 MiB |
 | `EMBEDDING_MODEL` | AI service | Embedding model setting used by the project |
+| `GENERATION_MODEL` | AI service | Generation (chat) model setting used by the project |
 | `VECTOR_DB_PATH` | AI service | Legacy/configurable vector storage path; verify against deployment setup |
 | `PORT` | Express server | API port; defaults to 5000 |
 | `MONGO_URI` | Express server | MongoDB connection string |
