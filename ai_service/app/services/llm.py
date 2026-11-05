@@ -7,9 +7,10 @@ load_dotenv()
 API_KEY = os.getenv("LLM_API_KEY")
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-# Generation model is configurable via env; default matches the model the
-# project has been running with.
-GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-1.5-flash")
+# Generation model is configurable via env. Default is gemini-3.8-flash, the
+# model the Gemini API itself recommends: gemini-1.5-flash is retired and
+# gemini-2.5-flash is closed to new API users (both 404 live, 2026-11-05).
+GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-3.8-flash")
 
 def generate_answer(question: str, context: list[str], history: list[dict] = None) -> str:
     """
