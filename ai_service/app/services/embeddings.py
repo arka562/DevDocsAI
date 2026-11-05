@@ -8,6 +8,10 @@ API_KEY = os.getenv("LLM_API_KEY")
 if API_KEY:
     genai.configure(api_key=API_KEY)
 
+# Embedding model is configurable via env; default matches the model the
+# project has been running with. README documents this variable.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+
 def get_embedding(text: str) -> list[float]:
     """
     Generates a dense vector embedding using Gemini to save RAM.
@@ -16,7 +20,7 @@ def get_embedding(text: str) -> list[float]:
         raise ValueError("LLM_API_KEY is missing")
     
     result = genai.embed_content(
-        model="models/text-embedding-004",
+        model=EMBEDDING_MODEL,
         content=text,
         task_type="retrieval_query"
     )
@@ -30,7 +34,7 @@ def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
         raise ValueError("LLM_API_KEY is missing")
         
     result = genai.embed_content(
-        model="models/text-embedding-004",
+        model=EMBEDDING_MODEL,
         content=texts,
         task_type="retrieval_document"
     )
