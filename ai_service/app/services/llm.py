@@ -1,17 +1,15 @@
 import os
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
 API_KEY = os.getenv("LLM_API_KEY")
-if API_KEY:
-    genai.configure(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 # Generation model is configurable via env; default matches the model the
 # project has been running with.
 GENERATION_MODEL = os.getenv("GENERATION_MODEL", "gemini-1.5-flash")
-model = genai.GenerativeModel(GENERATION_MODEL)
 
 def generate_answer(question: str, context: list[str], history: list[dict] = None) -> str:
     """
@@ -53,7 +51,7 @@ Provide:
 """
 
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=GENERATION_MODEL, contents=prompt)
         return response.text
     except Exception as e:
         import logging

@@ -1,16 +1,16 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 API_KEY = os.getenv("LLM_API_KEY")
 
-if API_KEY:
-    genai.configure(api_key=API_KEY)
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
 # Embedding model is configurable via env; default matches the model the
 # project has been running with. README documents this variable.
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-004")
 
 def get_embedding(text: str) -> list[float]:
     """
@@ -19,12 +19,14 @@ def get_embedding(text: str) -> list[float]:
     if not API_KEY:
         raise ValueError("LLM_API_KEY is missing")
     
-    result = genai.embed_content(
+    result = client.models.embed_content(
         model=EMBEDDING_MODEL,
-        content=text,
-        task_type="retrieval_query"
+        contents=text,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_QUERY", output_dimensionality=768
+        ),
     )
-    return result['embedding']
+    return list(result.embeddings[0].values)
 
 def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
     """
@@ -33,9 +35,11 @@ def get_embeddings_batch(texts: list[str]) -> list[list[float]]:
     if not API_KEY:
         raise ValueError("LLM_API_KEY is missing")
         
-    result = genai.embed_content(
+    result = client.models.embed_content(
         model=EMBEDDING_MODEL,
-        content=texts,
-        task_type="retrieval_document"
+        contents=texts,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_DOCUMENT", output_dimensionality=768
+        ),
     )
-    return result['embedding']
+    return [list(e.values) for e in result.embeddings]
